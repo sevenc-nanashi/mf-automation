@@ -21,3 +21,5 @@ gem "logger", "~> 1.7"
 gem "http-cookie", "~> 1.1"
 
 gem "csv", "~> 3.3"
+
+gem "typeprof", "~> 0.30.1"

@@ -1,8 +1,52 @@
 # frozen_string_literal: true
+require "date"
 require "csv"
 require "http-cookie"
 
 class MoneyForwardClient
+  Transaction =
+    Struct.new(
+      :date,
+      :description,
+      :amount,
+      :category_large,
+      :category_medium,
+      :memo,
+      keyword_init: true
+    ) do
+      def income?
+        amount.positive?
+      end
+
+      def expense?
+        amount.negative?
+      end
+
+      def category
+        return nil unless category_large || category_medium
+
+        { large: category_large, medium: category_medium }
+      end
+
+      def self.normalize_category(category)
+        defaults = { large: "未分類", medium: "未分類" }.freeze
+        return defaults if category.nil? || category.empty?
+
+        normalized =
+          category.each_with_object({}) do |(key, value), memo|
+            next if value.nil? || value.to_s.strip.empty?
+
+            case key.to_s
+            when "large", "large_category"
+              memo[:large] = value
+            when "medium", "medium_category"
+              memo[:medium] = value
+            end
+          end
+        defaults.merge(normalized)
+      end
+    end
+
   def initialize(cookies_txt_path)
     Console.info("Logging in to Money Forward account...")
     @client = build_client(cookies_txt_path)
@@ -36,14 +80,104 @@ class MoneyForwardClient
         .encode(Encoding::UTF_8)
     parsed = CSV.parse(csv, headers: true)
     parsed.map do |row|
-      {
+      Transaction.new(
         date: Date.parse(row["日付"]),
         description: row["内容"],
         amount: row["金額（円）"].gsub(",", "").to_i,
         category_large: row["大項目"],
         category_medium: row["中項目"],
         memo: row["メモ"]
-      }
+      )
+    end
+  end
+
+  def sync(wallet_id, transactions)
+    today = Date.today
+    previous_month = today.prev_month
+    histories = [
+      *fetch_history(
+        wallet_id,
+        year: previous_month.year,
+        month: previous_month.month
+      ),
+      *fetch_history(wallet_id, year: today.year, month: today.month)
+    ].sort_by(&:date)
+
+    Array(transactions).compact.each do |transaction|
+      unless transaction.is_a?(Transaction)
+        raise ArgumentError,
+              "MoneyForward transactions are required (got #{transaction.class})"
+      end
+
+      if transaction.date < previous_month.beginning_of_month
+        Console.info("Skipping old transaction on #{transaction.date}")
+        next
+      end
+
+      if transaction.income?
+        category = Transaction.normalize_category(transaction.category)
+        match =
+          histories.delete_if_first do |history|
+            history.date == transaction.date &&
+              history.amount == transaction.amount
+          end
+        if match
+          Console.info(
+            "Found matching Money Forward transaction for charge on #{transaction.date}, skipping..."
+          )
+        else
+          Console.info(
+            "Could not find matching transaction for charge on #{transaction.date}, creating income transaction..."
+          )
+          create_income_transaction(
+            wallet_id,
+            large_category: category[:large],
+            medium_category: category[:medium],
+            date: transaction.date,
+            description: transaction.description,
+            amount: transaction.amount
+          )
+        end
+      else
+        unless transaction.expense?
+          Console.warn(
+            "Transaction amount is zero for #{transaction.description} on #{transaction.date}, skipping..."
+          )
+          next
+        end
+
+        description = transaction.description
+        unless description && !description.empty?
+          Console.warn(
+            "Unrecognized transaction description: #{transaction.description.inspect}, skipping..."
+          )
+          next
+        end
+        category = Transaction.normalize_category(transaction.category)
+        match =
+          histories.delete_if_first do |history|
+            history.date == transaction.date &&
+              history.amount == transaction.amount &&
+              history.description.include?(description)
+          end
+        if match
+          Console.info(
+            "Found matching Money Forward transaction for #{description} on #{transaction.date}, skipping..."
+          )
+        else
+          Console.info(
+            "Could not find matching transaction for #{description} on #{transaction.date}, creating expense transaction..."
+          )
+          create_expense_transaction(
+            wallet_id,
+            large_category: category[:large],
+            medium_category: category[:medium],
+            date: transaction.date,
+            description: description,
+            amount: transaction.amount.abs
+          )
+        end
+      end
     end
   end
 

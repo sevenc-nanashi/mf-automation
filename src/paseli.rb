@@ -1,11 +1,49 @@
 # frozen_string_literal: true
+require "date"
 require "http"
 require "nokogiri"
 require "console"
 require "console/compatible/logger"
 require_relative "const"
+require_relative "moneyforward"
 
 class PaseliClient
+  INCOME_CATEGORY = { large: "未分類", medium: "未分類" }.freeze
+  EXPENSE_CATEGORY = { large: "趣味・娯楽", medium: "映画・音楽・ゲーム" }.freeze
+
+  Transaction =
+    Struct.new(:date, :description, :amount, keyword_init: true) do
+      def charge?
+        description == "チャージ"
+      end
+
+      def to_mf
+        case description
+        when "チャージ"
+          MoneyForwardClient::Transaction.new(
+            date: date,
+            description: "チャージ",
+            amount: amount,
+            category_large: INCOME_CATEGORY[:large],
+            category_medium: INCOME_CATEGORY[:medium]
+          )
+        when /\A支払い\((.+?)\)\z/
+          MoneyForwardClient::Transaction.new(
+            date: date,
+            description: Regexp.last_match(1),
+            amount: -amount,
+            category_large: EXPENSE_CATEGORY[:large],
+            category_medium: EXPENSE_CATEGORY[:medium]
+          )
+        else
+          Console.warn(
+            "Unrecognized transaction description: #{description}, skipping..."
+          )
+          nil
+        end
+      end
+    end
+
   def initialize(username, password)
     @client = build_client
     Console.info("Logging in to PASELI account...")
@@ -51,7 +89,7 @@ class PaseliClient
         description = desc_el.text.strip
         amount_text = amount_el.text.strip
         amount = amount_text.delete_suffix("円").gsub(",", "").to_i
-        { date: Date.parse(date), description:, amount: amount }
+        Transaction.new(date: Date.parse(date), description:, amount: amount)
       end
   end
 

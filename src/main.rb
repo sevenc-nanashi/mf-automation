@@ -89,19 +89,3 @@ paseli_client.history.each do |paseli_tx|
     end
   end
 end
-# mf_client.create_income_transaction(
-#   moneyforward_wallet_id,
-#   large_category: "収入",
-#   medium_category: "その他入金",
-#   date: Date.today,
-#   description: "Test Income",
-#   amount: 5
-# )
-# mf_client.create_expense_transaction(
-#   moneyforward_wallet_id,
-#   large_category: "趣味・娯楽",
-#   medium_category: "映画・音楽・ゲーム",
-#   date: Date.today,
-#   description: "Test Expense",
-#   amount: 5
-# )

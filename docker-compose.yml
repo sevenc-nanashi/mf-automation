@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  mf-automation:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONEYFORWARD_COOKIES: /data/moneyforward.cookies.txt
+    volumes:
+      - ./cookies/moneyforward.cookies.txt:/data/moneyforward.cookies.txt:ro

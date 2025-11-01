@@ -24,3 +24,9 @@
 docker compose build
 docker compose up -d
 ```
+
+### テスト実行
+
+```bash
+docker compose run --rm --build mf-automation --test
+```

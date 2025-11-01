@@ -3,7 +3,7 @@ version: "3.9"
 services:
   mf-automation:
     build: .
-    restart: unless-stopped
+    restart: on-failure
     env_file:
       - .env
     environment:

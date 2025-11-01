@@ -7,7 +7,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY Gemfile Gemfile.lock ./
-RUN bundle install
+RUN bundle config set --local path 'vendor/bundle' \
+  && bundle install --jobs 4 --retry 3
 
 COPY . .
 

@@ -14,7 +14,7 @@ ENV_EXPORT_PATTERN='^(PASELI_|MONEYFORWARD_|TZ|RUBY|PATH$)'
   printf '%s=%q\n' 'BUNDLE_BIN_PATH' '/usr/local/bundle/bin'
 } > /app/.cron_env
 
-if [[ $1 == "--test" ]]; then
+if [[ ${1:-} == "--test" ]]; then
   echo "[docker-entrypoint] Test mode enabled. Running scheduled job immediately..."
   (
     set -a
@@ -28,4 +28,3 @@ else
   echo "[docker-entrypoint] Starting cron daemon..."
   exec cron -f -L 15
 fi
-

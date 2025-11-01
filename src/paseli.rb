@@ -37,6 +37,7 @@ class PaseliClient
           )
         else
           Console.warn(
+            self,
             "Unrecognized transaction description: #{description}, skipping..."
           )
           nil
@@ -46,13 +47,13 @@ class PaseliClient
 
   def initialize(username, password)
     @client = build_client
-    Console.info("Logging in to PASELI account...")
+    Console.info(self, "Logging in to PASELI account...")
     establish_login_cookie
     login_doc = retrieve_login_page
     csrf_token = extract_csrf_token(login_doc)
     perform_login(username, password, csrf_token)
     @user_name = fetch_user_name
-    Console.info("Logged in as #{@user_name}")
+    Console.info(self, "Logged in as #{@user_name}")
   end
 
   def current_balance
@@ -119,7 +120,7 @@ class PaseliClient
 
   def extract_csrf_token(login_doc)
     token = login_doc.at_css('input[name="csrfmiddlewaretoken"]')["value"]
-    Console.debug("CSRF Token: #{token}")
+    Console.debug(self, "CSRF Token: #{token}")
     token
   end
 

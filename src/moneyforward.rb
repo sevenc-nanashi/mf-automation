@@ -48,10 +48,10 @@ class MoneyForwardClient
     end
 
   def initialize(cookies_txt_path)
-    Console.info("Logging in to Money Forward account...")
+    Console.info(self, "Logging in to Money Forward account...")
     @client = build_client(cookies_txt_path)
     @mail = fetch_mail
-    Console.info("Logged in as #{@mail}")
+    Console.info(self, "Logged in as #{@mail}")
 
     @categories = nil
 
@@ -110,7 +110,7 @@ class MoneyForwardClient
       end
 
       if transaction.date < previous_month.beginning_of_month
-        Console.info("Skipping old transaction on #{transaction.date}")
+        Console.info(self, "Skipping old transaction on #{transaction.date}")
         next
       end
 
@@ -123,10 +123,12 @@ class MoneyForwardClient
           end
         if match
           Console.info(
+            self,
             "Found matching Money Forward transaction for charge on #{transaction.date}, skipping..."
           )
         else
           Console.info(
+            self,
             "Could not find matching transaction for charge on #{transaction.date}, creating income transaction..."
           )
           create_income_transaction(
@@ -141,6 +143,7 @@ class MoneyForwardClient
       else
         unless transaction.expense?
           Console.warn(
+            self,
             "Transaction amount is zero for #{transaction.description} on #{transaction.date}, skipping..."
           )
           next
@@ -149,6 +152,7 @@ class MoneyForwardClient
         description = transaction.description
         unless description && !description.empty?
           Console.warn(
+            self,
             "Unrecognized transaction description: #{transaction.description.inspect}, skipping..."
           )
           next
@@ -162,10 +166,12 @@ class MoneyForwardClient
           end
         if match
           Console.info(
+            self,
             "Found matching Money Forward transaction for #{description} on #{transaction.date}, skipping..."
           )
         else
           Console.info(
+            self,
             "Could not find matching transaction for #{description} on #{transaction.date}, creating expense transaction..."
           )
           create_expense_transaction(
@@ -287,6 +293,7 @@ class MoneyForwardClient
         '#user_asset_act_sub_account_id_hash > option[selected="selected"]'
       )
     Console.info(
+      self,
       "Creating #{income ? "income" : "expense"} transaction on #{date} for #{amount} yen in wallet #{
         wallet_account_id_option.text.match(/^(.*) \([-0-9,]+円\)$/)[1].strip
       }..."

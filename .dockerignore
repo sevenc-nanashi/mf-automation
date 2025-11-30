@@ -1,0 +1,5 @@
+*
+!./docker-entrypoint.sh
+!./src
+!./Gemfile
+!./Gemfile.lock

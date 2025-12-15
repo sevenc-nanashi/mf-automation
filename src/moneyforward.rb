@@ -50,7 +50,7 @@ class MoneyForwardClient
   def initialize(cookies_txt_path)
     Console.info(self, "Logging in to Money Forward account...")
     @client = build_client(cookies_txt_path)
-    @mail = fetch_mail
+    @mail = login(cookies_txt_path)
     Console.info(self, "Logged in as #{@mail}")
 
     @categories = nil
@@ -327,13 +327,25 @@ class MoneyForwardClient
     client = HTTP::Client.new.follow(strict: false)
     cookie_jar = HTTP::CookieJar.new
     cookie_jar.load(cookies_txt_path, format: :cookiestxt)
+    unless cookie_jar.cookies().find{ |c| c.name == "_mfid_session" }
+      raise "Invalid or expired cookies (no _mfid_session found)"
+    end
     client.cookies(cookie_jar)
   end
 
-  def fetch_mail
+  def login(cookies_txt_path)
     id_page = @client.get("https://id.moneyforward.com/me")
     raise "Failed to get ID page" unless id_page.status.success?
-    id_page.body.to_s.match(/gon\.headerDisplayName="([^"]+)"/)[1]
+    maybe_mail = id_page.body.to_s.match(/gon\.headerDisplayName="([^"]+)"/)
+    raise "Failed to extract mail from ID page" unless maybe_mail
+    new_cookies = HTTP::CookieJar.new
+    new_cookies.load(cookies_txt_path, format: :cookiestxt)
+    id_page.cookies.each do |cookie|
+      new_cookies.add(cookie)
+    end
+    new_cookies.save(cookies_txt_path, format: :cookiestxt)
+
+    maybe_mail[1]
   end
 
   def load_categories

@@ -10,8 +10,8 @@ paseli_password = ENV.fetch("PASELI_PASSWORD")
 moneyforward_wallet_id = ENV.fetch("MONEYFORWARD_WALLET_ID")
 moneyforward_cookies = ENV.fetch("MONEYFORWARD_COOKIES")
 
-paseli_client = PaseliClient.new(paseli_id, paseli_password)
 mf_client = MoneyForwardClient.new(moneyforward_cookies)
+paseli_client = PaseliClient.new(paseli_id, paseli_password)
 paseli_transactions = paseli_client.history
 moneyforward_transactions = paseli_transactions.map(&:to_mf).compact
 mf_client.sync(moneyforward_wallet_id, moneyforward_transactions)
